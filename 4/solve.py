@@ -33,11 +33,11 @@ def get_values(matches):
 
 
 def get_card_counts(matches):
-    components = [1] * len(matches)
-    for idx, (match, component) in enumerate(zip(matches, components)):
+    counts = [1] * len(matches)
+    for idx, (match, count) in enumerate(zip(matches, counts)):
         for jdx in range(idx + 1, idx + 1 + match):
-            components[jdx] += component
-    return components
+            counts[jdx] += count
+    return counts
 
 
 def main(filename="input.txt"):
