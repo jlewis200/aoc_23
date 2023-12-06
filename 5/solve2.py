@@ -4,57 +4,49 @@ import re
 import networkx as nx
 
 
-class Interval:
+class Mapper:
+
+    def __init__(self, rangers):
+        self.map_ranges = [MapRange(*ranger) for ranger in rangers]
     
-    def __init__(self, start, end):
-        self.start = start
-        self.end = end
-
-    def __and__(self, other):
-        start = max(self.start, other.start)
-        end = min(self.end, other.end)
-        if start > end:
-            return None
-        return Interval(start, end)
-
-    def __str__(self):
-        return f"Interval({self.start}, {self.end})"
-
-    def __repr__(self):
-        return str(self)
-        
-    def __contains__(self, value):
-        return value >= self.start and value <= self.end
-
-    def __add__(self, value):
-        return Interval(self.start + value, self.end + value)
-
-    def __sub__(self, value):
-        return Interval(self.start - value, self.end - value)
-
-class Transform:
-    
-    def __init__(self, src_interval, shift):
-        self.src_interval = src_interval
-        self.dst_interval = src_interval + shift
-        self.shift = shift
-
     def forward(self, value):
-        return value + self.shift
+        for map_range in self.map_ranges:
+            try:
+                return map_range.forward(value)
+            except ValueError:
+                pass
+        return value
 
     def backward(self, value):
-        return value - self.shift
+        for map_range in self.map_ranges:
+            try:
+                return map_range.backward(value)
+            except ValueError:
+                pass
+        return value
 
-    def __str__(self):
-        return f"Transform\n" \
-               f"    id:  {id(self)}\n" \
-               f"    src_interval:  {self.src_interval}\n" \
-               f"    dst_interval:  {self.dst_interval}\n" \
-               f"    shift:  {self.shift}" 
 
-    def __repr__(self):
-        return str(self)
- 
+class MapRange:
+    
+    def __init__(self, dst, src, length):
+        dst, src, length = map(int, (dst, src, length))
+        self.src_range = range(src, src + length)
+        self.dst_range = range(dst, dst + length)
+        self.shift = dst - src
+
+    def forward(self, value):
+        if value in self.src_range:
+            return value + self.shift
+        else:
+            raise ValueError
+
+    def backward(self, value):
+        if value in self.dst_range:
+            return value - self.shift
+        else:
+            raise ValueError
+
+
 def read_file(filename):
     with open(filename, encoding="utf-8") as f_in:
         return f_in.readlines()
@@ -62,99 +54,76 @@ def read_file(filename):
 
 def parse_lines(lines):
     lines.append('\n')
-    return parse_seeds(lines), parse_intervals(lines)
+    return parse_seeds(lines), parse_maps(lines)
 
 
 def parse_seeds(lines):
     seeds = re.findall(r"\d+", lines.pop(0))
     lines.pop(0)
     seeds = list(map(int, seeds))
-    seed_intervals = []
-    for idx in range(0, len(seeds), 2):
-        start = seeds[idx]
-        end = seeds[idx] + seeds[idx + 1] - 1
-        seed_intervals.append(Interval(start, end))
-    return seed_intervals
+    for idx in range(1, len(seeds), 2):
+        seeds[idx] += seeds[idx - 1] - 1
+    return [range(seeds[idx], seeds[idx + 1]) for idx in range(0, len(seeds), 2)]
 
 
-def parse_intervals(lines):
-    srcs = []
-    dsts = []
+def parse_maps(lines):
+    mappers = []
     while len(lines) > 0:
-        src, dst = parse_interval(lines)
-        srcs.append(src)
-        dsts.append(dst)
-    return srcs, dsts
+        mappers.append(parse_map(lines))
+    return mappers
 
 
-def parse_interval(lines):
-    srcs = []
-    dsts = []
-    line = lines.pop(0)
+def parse_map(lines):
+    map_ranges = []
+    name = lines.pop(0)
     line = lines.pop(0)
     while line != '\n':
-        dst, src, length = parse_map_values(line)
-        srcs.append(Interval(src, src + length - 1))
-        dsts.append(Interval(dst, dst + length - 1))
+        map_ranges.append(parse_map_values(line))
         line = lines.pop(0)
-    return srcs, dsts
+    return Mapper(map_ranges)
 
 
 def parse_map_values(line):
-    return list(map(int, re.findall(r"\d+", line)))
+    return re.findall(r"\d+", line)
 
 
-def get_graph(seed_intervals, src_intervals, dst_intervals):
-    graph = nx.DiGraph()
-    
-    # map seed_interval to first src_interval
-    for seed_interval in seed_intervals:
-        for src_interval, dst_interval in zip(src_intervals[0], dst_intervals[0]):
-            intersection = seed_interval & src_interval
-            if intersection is not None:
-                shift = dst_interval.start - src_interval.start
-                transform = Transform(intersection, shift)
-                graph.add_node(transform)
-   
-    # map src_intervals to dst_intervals
-    for idx in range(1, len(src_intervals)):
-        for src_interval, dst_interval in zip(src_intervals[idx], dst_intervals[idx]):
-            # add an edge between every intersection of dst_interval already in the graph which isn't absorbed by the input of a previous layer
-            # every 
-            intersection = dst_interval & src_interval
-            if intersection is not None:
-                shift = dst_interval.start - src_interval.start
-                transform = Transform(intersection, shift)
-                graph.add_node(transform)
+def forward(mappers, seeds):
+    values = seeds.copy()
+    for mapper in mappers:
+        next_values = []
+        for value in values:
+            next_values.append(mapper.forward(value))
+        values = next_values 
+    return values
 
 
-    breakpoint()
+def backward(mappers, locations):
+    values = locations.copy()
+    for mapper in mappers[::-1]:
+        next_values = []
+        for value in values:
+            next_values.append(mapper.backward(value))
+        values = next_values
+    return values
+
+
+def solve2(mappers, seed_ranges):
+    locations = forward(mappers, [seed_range.start for seed_range in seed_ranges])
+    for idx, mapper in enumerate(mappers):
+        for map_range in mapper.map_ranges:
+            value = map_range.src_range.start
+            seed = backward(mappers[:idx], [value])
+            location = forward(mappers[idx:], [value])
+            assert location == forward(mappers, seed) # sanity check
+            if any(seed[0] in seed_range for seed_range in seed_ranges):
+                locations.append(location[0])
+    return locations
 
 
 def main(filename="input.txt"):
-    seed_intervals, (src_intervals, dst_intervals) = parse_lines(read_file(filename))
-    print(seed_intervals)
-    print(src_intervals)
-    print(dst_intervals)
-
-    graph = get_graph(seed_intervals, src_intervals, dst_intervals)
-
-    breakpoint()
-    #locations = forward(maps, seeds)
-    #print(locations)
-
-    #seeds = backward(maps, locations)
-    #print(seeds)
-
-    #locations = forward(maps, seeds)
-    #print(locations)
-
-    #seeds = backward(maps, locations)
-    #print(seeds)
- 
-    ##print(f"part 1:  {min(locations)}")
+    seed_ranges, mappers = parse_lines(read_file(filename))
+    print(f"part 2:  {min(solve2(mappers, seed_ranges))}")
 
 
 if __name__ == "__main__":
-    main("test.txt")
-    #main()
+    main()
