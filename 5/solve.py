@@ -83,10 +83,7 @@ def main(filename="input.txt"):
     seeds, maps = parse_lines(read_file(filename))
     locations = map_seeds(maps, seeds)
     print(f"part 1:  {min(locations)}")
-    breakpoint()
-    print(f"part 2:  {sum(get_card_counts(matches))}")
 
 
 if __name__ == "__main__":
-    main("test.txt")
-    #main()
+    main()
