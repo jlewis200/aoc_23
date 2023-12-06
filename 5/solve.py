@@ -88,5 +88,5 @@ def main(filename="input.txt"):
 
 
 if __name__ == "__main__":
-    #main("test.txt")
-    main()
+    main("test.txt")
+    #main()
