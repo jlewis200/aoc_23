@@ -14,7 +14,6 @@ class Hand:
 
     def __init__(self, cards, bid):
         self.cards = np.array(self._map_cards(cards))
-        self.unique, self.counts = np.unique(self.cards, return_counts=True)
         self.bid = bid
         self.strength = self._get_strength()
 
@@ -29,6 +28,7 @@ class Hand:
         return int(card)
 
     def _get_strength(self):
+        self.unique, self.counts = np.unique(self.cards, return_counts=True)
         strength = 0
         if self._five_of_a_kind():
             strength = 6
@@ -72,16 +72,45 @@ class Hand:
         return self.strength < other.strength
 
 
+class HandVariant(Hand):
+    card_map = {
+        "T": 10,
+        "J": -1,
+        "Q": 12,
+        "K": 13,
+        "A": 14,
+    }
+
+    def __init__(self, cards, bid):
+        super().__init__(cards, bid)
+        self.strength = self._get_best_strength(0)
+
+    def _get_best_strength(self, strength):
+        strength = self._get_strength()
+        if -1 in self.cards:
+            strength = self._enumerate_alternates(strength)
+        return strength
+
+    def _enumerate_alternates(self, strength):
+        idx = np.where(self.cards == -1)[0][0]
+        cards_copy = self.cards.copy()
+        for new_card in range(1, 15):
+            self.cards[idx] = new_card
+            strength = max(strength, self._get_best_strength(strength))
+        self.cards = cards_copy
+        return strength
+
+
 def read_file(filename):
     with open(filename, encoding="utf-8") as f_in:
         return f_in.readlines()
 
 
-def parse_hands(lines):
+def parse_hands(lines, hand_type):
     hands = []
     for line in lines:
         cards, bid = line.strip().split()
-        hands.append(Hand(list(cards), int(bid)))
+        hands.append(hand_type(list(cards), int(bid)))
     return hands
 
 
@@ -93,9 +122,9 @@ def get_winnings(hands):
 
 
 def main(filename="input.txt"):
-    hands = parse_hands(read_file(filename))
-    winnings = get_winnings(hands)
-    print(f"part 1:  {sum(winnings)}")
+    lines = read_file(filename)
+    print(f"part 1:  {sum(get_winnings(parse_hands(lines, Hand)))}")
+    print(f"part 2:  {sum(get_winnings(parse_hands(lines, HandVariant)))}")
 
 
 if __name__ == "__main__":
