@@ -22,16 +22,16 @@ def extrapolate_forward(diff):
     return diff[-1] + extrapolate_forward(np.diff(diff))
 
 
-def extrapolcate_backward(diff):
+def extrapolate_backward(diff):
     if np.all(diff == 0):
         return 0
-    return diff[0] - extrapolcate_backward(np.diff(diff))
+    return diff[0] - extrapolate_backward(np.diff(diff))
 
 
 def main(filename="input.txt"):
     histories = parse_histories(read_file(filename))
     print(f"part 1:  {sum(get_extrapolations(histories, extrapolate_forward))}")
-    print(f"part 2:  {sum(get_extrapolations(histories, extrapolcate_backward))}")
+    print(f"part 2:  {sum(get_extrapolations(histories, extrapolate_backward))}")
 
 
 if __name__ == "__main__":
