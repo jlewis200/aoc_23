@@ -35,7 +35,51 @@ class PipeGraph(nx.Graph):
         "F": "┌",
         "7": "┐",
     }
-    EXTERNAL_TRAVERSABLE = {".", " "}
+    EXPAND_CHAR_MAP = {
+        "│": np.array(
+            (
+                ["│", " "],
+                ["│", " "],
+            )
+        ),
+        "─": np.array(
+            (
+                ["─", "─"],
+                [" ", " "],
+            )
+        ),
+        "└": np.array(
+            (
+                ["└", "─"],
+                [" ", " "],
+            )
+        ),
+        "┘": np.array(
+            (
+                ["┘", " "],
+                [" ", " "],
+            )
+        ),
+        "┌": np.array(
+            (
+                ["┌", "─"],
+                ["│", " "],
+            )
+        ),
+        "┐": np.array(
+            (
+                ["┐", " "],
+                ["│", " "],
+            )
+        ),
+        ".": np.array(
+            (
+                [".", " "],
+                [" ", " "],
+            )
+        ),
+    }
+    TRAVERSABLE = {".", " "}
 
     def __init__(self, board):
         super().__init__()
@@ -133,41 +177,21 @@ class PipeGraph(nx.Graph):
                 if (row, col) not in self.nodes:
                     self.board[row, col] = "."
 
-    def _expand(self):
-        new_board = []
-        for row in self.board:
-            new_row_0 = []
-            new_row_1 = []
-            for col in row:
-                if col == "│":
-                    new_row_0 += ["│", " "]
-                    new_row_1 += ["│", " "]
-                elif col == "─":
-                    new_row_0 += ["─", "─"]
-                    new_row_1 += [" ", " "]
-                elif col == "└":
-                    new_row_0 += ["└", "─"]
-                    new_row_1 += [" ", " "]
-                elif col == "┘":
-                    new_row_0 += ["┘", " "]
-                    new_row_1 += [" ", " "]
-                elif col == "┌":
-                    new_row_0 += ["┌", "─"]
-                    new_row_1 += ["│", " "]
-                elif col == "┐":
-                    new_row_0 += ["┐", " "]
-                    new_row_1 += ["│", " "]
-                elif col == ".":
-                    new_row_0 += [".", " "]
-                    new_row_1 += [" ", " "]
-            new_board.append(new_row_0)
-            new_board.append(new_row_1)
-        self.board = np.array(new_board)
-
     def get_internal_area(self):
-        self._expand()
+        self.board = self._expand()
         self._bfs_external()
         return (self.board == ".").sum()
+
+    def _expand(self):
+        expanded_board = np.empty(
+            (self.board.shape[0] * 2, self.board.shape[1] * 2), dtype=self.board.dtype
+        )
+        for idx, row in enumerate(self.board):
+            idx *= 2
+            for jdx, col in enumerate(row):
+                jdx *= 2
+                expanded_board[idx : idx + 2, jdx : jdx + 2] = self.EXPAND_CHAR_MAP[col]
+        return expanded_board
 
     def _bfs_external(self):
         self.queue = [Position((0, 0))]
@@ -179,22 +203,22 @@ class PipeGraph(nx.Graph):
             self._bfs_external_east(pos)
 
     def _bfs_external_north(self, pos):
-        if self.board[pos.north] in self.EXTERNAL_TRAVERSABLE:
+        if self.board[pos.north] in self.TRAVERSABLE:
             self.board[pos.north] = "O"
             self.queue.append(pos.north)
 
     def _bfs_external_south(self, pos):
-        if self.board[pos.south] in self.EXTERNAL_TRAVERSABLE:
+        if self.board[pos.south] in self.TRAVERSABLE:
             self.board[pos.south] = "O"
             self.queue.append(pos.south)
 
     def _bfs_external_west(self, pos):
-        if self.board[pos.west] in self.EXTERNAL_TRAVERSABLE:
+        if self.board[pos.west] in self.TRAVERSABLE:
             self.board[pos.west] = "O"
             self.queue.append(pos.west)
 
     def _bfs_external_east(self, pos):
-        if self.board[pos.east] in self.EXTERNAL_TRAVERSABLE:
+        if self.board[pos.east] in self.TRAVERSABLE:
             self.board[pos.east] = "O"
             self.queue.append(pos.east)
 
