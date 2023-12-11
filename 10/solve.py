@@ -2,12 +2,13 @@
 
 import numpy as np
 import networkx as nx
+from time import sleep
 
 
 class Position(tuple):
     @property
     def north(self):
-        return Position((self[0] - 1, self[1]))
+        return Position((max(0, self[0] - 1), self[1]))
 
     @property
     def south(self):
@@ -15,7 +16,7 @@ class Position(tuple):
 
     @property
     def west(self):
-        return Position((self[0], self[1] - 1))
+        return Position((self[0], max(0, self[1] - 1)))
 
     @property
     def east(self):
@@ -100,6 +101,9 @@ class PipeGraph(nx.Graph):
     def _replace_chars(self):
         for old, new in self.CHAR_MAP.items():
             self.board[self.board == old] = new
+            print(self)
+            sleep(0.01)
+
 
     def _replace_start(self):
         if self._connected_north(self.start):
@@ -116,6 +120,8 @@ class PipeGraph(nx.Graph):
                 self.board[self.start] = "┌"
         else:
             self.board[self.start] = "─"
+        print(self)
+        sleep(0.01)
 
     def _bfs(self):
         self.add_node(self.start)
@@ -176,6 +182,8 @@ class PipeGraph(nx.Graph):
             for col in range(self.board.shape[1]):
                 if (row, col) not in self.nodes:
                     self.board[row, col] = "."
+                    print(self)
+                    sleep(0.01)
 
     def get_internal_area(self):
         self.board = self._expand()
@@ -201,6 +209,8 @@ class PipeGraph(nx.Graph):
             self._bfs_external_south(pos)
             self._bfs_external_west(pos)
             self._bfs_external_east(pos)
+            print(self)
+            sleep(0.01)
 
     def _bfs_external_north(self, pos):
         if self.board[pos.north] in self.TRAVERSABLE:
@@ -208,7 +218,7 @@ class PipeGraph(nx.Graph):
             self.queue.append(pos.north)
 
     def _bfs_external_south(self, pos):
-        if self.board[pos.south] in self.TRAVERSABLE:
+        if pos.south[0] < self.board.shape[0] and self.board[pos.south] in self.TRAVERSABLE:
             self.board[pos.south] = "O"
             self.queue.append(pos.south)
 
@@ -218,7 +228,7 @@ class PipeGraph(nx.Graph):
             self.queue.append(pos.west)
 
     def _bfs_external_east(self, pos):
-        if self.board[pos.east] in self.TRAVERSABLE:
+        if pos.east[1] < self.board.shape[1] and self.board[pos.east] in self.TRAVERSABLE:
             self.board[pos.east] = "O"
             self.queue.append(pos.east)
 
@@ -249,4 +259,4 @@ def main(filename="input.txt"):
 
 if __name__ == "__main__":
     main("test4.txt")
-    main()
+    #main()
