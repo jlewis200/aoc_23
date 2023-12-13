@@ -68,10 +68,35 @@ def get_summary(arrays):
     return summary
 
 
+def smudges(array):
+    for idx, row in enumerate(array):
+        for jdx, col in enumerate(row):
+            smudged = array.copy()
+            smudged[idx, jdx] = "#" if col == "." else "."
+            yield smudged
+
+
+def get_smudge_summary(arrays):
+    summary = 0
+    for idx, array in enumerate(arrays):
+        old_col = find_fold_col(array)
+        old_row = find_fold_row(array)
+        for smudged in smudges(array):
+            col = find_fold_col(smudged)
+            row = find_fold_row(smudged)
+            if col == old_col and row == old_row:
+                continue
+            print(idx)
+            summary += col
+            summary += 100 * row
+            break
+    return summary
+
+
 def main(filename="input.txt"):
     patterns = parse_patterns(read_file(filename))
     print(f"part 1:  {get_summary(patterns)}")
-    # print(f"part 2:  {None}")
+    print(f"part 2:  {get_smudge_summary(patterns)}")
 
 
 if __name__ == "__main__":
