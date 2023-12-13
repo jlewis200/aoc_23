@@ -82,14 +82,30 @@ def get_smudge_summary(arrays):
         old_col = find_fold_col(array)
         old_row = find_fold_row(array)
         for smudged in smudges(array):
+            if idx == 67:
+                print(array_str(smudged))
+                print()
+                continue
+            else:
+                break
             col = find_fold_col(smudged)
             row = find_fold_row(smudged)
-            if col == old_col and row == old_row:
-                continue
-            print(idx)
-            summary += col
-            summary += 100 * row
-            break
+            if row > 0 and col > 0:
+                print("#" * 80)
+                print(array_str(array))
+                print()
+                print("#" * 80)
+                print(array_str(smudged))
+                print()
+
+            if col != old_col and col != 0:
+                summary += col
+                print(f"{idx} {row} {col}")
+                break
+            if row != old_row and row != 0:
+                summary += 100 * row
+                print(f"{idx} {row} {col}")
+                break
     return summary
 
 
