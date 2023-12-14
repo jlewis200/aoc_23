@@ -22,8 +22,8 @@ def array_str(array):
 
 def check_top_down_fold(array, idx):
     """
-    Fold top section over bottom section.  Ret true if symmetrical.
-    Slice, reverse, truncate to common height.
+    Fold top section over bottom section.  Return true if symmetrical.
+    Slice, reverse top, truncate to common height, test equivalency.
     """
     top = array[:idx][::-1]
     bot = array[idx:]
@@ -35,8 +35,8 @@ def check_top_down_fold(array, idx):
 
 def check_left_right_fold(array, idx):
     """
-    Fold left section over right section.  Ret true if symmetrical.
-    Slice, reverse, truncate to common width.
+    Fold left section over right section.  Return true if symmetrical.
+    Slice, reverse left, truncate to common width, test equivalency.
     """
     left = array[:, :idx][:, ::-1]
     right = array[:, idx:]
@@ -46,25 +46,33 @@ def check_left_right_fold(array, idx):
     return (left == right).all()
 
 
-def find_fold_row(array):
-    for row in range(1, array.shape[0]):
-        if check_top_down_fold(array, row):
-            return row
-    return 0
+def get_fold_rows(array):
+    return {row for row in range(1, array.shape[0]) if check_top_down_fold(array, row)}
 
 
-def find_fold_col(array):
-    for col in range(1, array.shape[1]):
-        if check_left_right_fold(array, col):
-            return col
-    return 0
+def get_fold_cols(array):
+    return {col for col in range(1, array.shape[1]) if check_left_right_fold(array, col)}
+
+
+def get_value(rows, cols):
+    return 100 * rows.pop() if len(rows) > 0 else cols.pop()
 
 
 def get_summary(arrays):
     summary = 0
     for array in arrays:
-        summary += find_fold_col(array)
-        summary += 100 * find_fold_row(array)
+        rows = get_fold_rows(array)
+        cols = get_fold_cols(array)
+        summary += get_value(rows, cols)
+    return summary
+
+
+def get_smudge_summary(arrays):
+    summary = 0
+    for array in arrays:
+        rows = get_smudged_rows(array) - get_fold_rows(array)
+        cols = get_smudged_cols(array) - get_fold_cols(array)
+        summary += get_value(rows, cols)
     return summary
 
 
@@ -76,37 +84,18 @@ def smudges(array):
             yield smudged
 
 
-def get_smudge_summary(arrays):
-    summary = 0
-    for idx, array in enumerate(arrays):
-        old_col = find_fold_col(array)
-        old_row = find_fold_row(array)
-        for smudged in smudges(array):
-            if idx == 67:
-                print(array_str(smudged))
-                print()
-                continue
-            else:
-                break
-            col = find_fold_col(smudged)
-            row = find_fold_row(smudged)
-            if row > 0 and col > 0:
-                print("#" * 80)
-                print(array_str(array))
-                print()
-                print("#" * 80)
-                print(array_str(smudged))
-                print()
+def get_smudged_rows(array):
+    rows = set()
+    for smudged in smudges(array):
+        rows |= get_fold_rows(smudged)
+    return rows
 
-            if col != old_col and col != 0:
-                summary += col
-                print(f"{idx} {row} {col}")
-                break
-            if row != old_row and row != 0:
-                summary += 100 * row
-                print(f"{idx} {row} {col}")
-                break
-    return summary
+
+def get_smudged_cols(array):
+    cols = set()
+    for smudged in smudges(array):
+        cols |= get_fold_cols(smudged)
+    return cols
 
 
 def main(filename="input.txt"):
