@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-import re
+#import re
+import regex
 
 
 class Group:
     
-    cache = {}
-
     def __init__(self, seq, broken):
-        self.seq = self.squeeze(seq)
+        self.seq = seq
         self.broken = broken
         self.count = 0
     
@@ -18,41 +17,16 @@ class Group:
     def __repr__(self):
         return str(self)
 
+    def unfold(self):
+        self.seq = self.squeeze("?".join(self.seq for _ in range(5)))
+        self.broken = self.broken * 5
+
     def squeeze(self, seq):
         """
         Squeeze consecutive ".", strip ".".
         """
-        return re.sub(r"\.+", ".", seq, count=0).strip(".")
+        return regex.sub(r"\.+", ".", seq, count=0).strip(".")
 
-    def enumerate(self, seq, broken):
-        seq = self.squeeze(seq)
-
-        # check cache
-        try:
-            return self.cache[(seq, broken)]
-        except:
-            pass
-
-        if seq.count("?") == 0:
-            return self.is_valid(seq, broken)
-        
-        candidate_working = re.sub(r"\?", ".", seq, count=1)
-        candidate_broken = re.sub(r"\?", "#", seq, count=1)
-    
-        count = self.enumerate(candidate_working, broken) + self.enumerate(candidate_broken, broken)
-        
-        # add to cache
-        self.cache[(seq, broken)] = count
-
-        return count
-
-    def is_valid(self, seq, broken):
-        valid_str = ".".join("#" * broke for broke in broken)
-        return seq == valid_str
-
-    def unfold(self):
-        self.seq = self.squeeze("?".join(self.seq for _ in range(5)))
-        self.broken = self.broken * 5
 
 
 def read_file(filename):
@@ -67,7 +41,6 @@ def parse_groups(lines):
 def parse_group(line):
     seq, broken = line.strip().split()
     broken = tuple(map(int, broken.split(",")))
-    seq = seq.strip(".")
     return Group(seq, broken)
 
 
@@ -76,22 +49,50 @@ def get_counts(groups):
        
 
 def get_count(group):
-    count = group.enumerate(group.seq, group.broken)
-    print(count)
+    return get_count_recursive("." + group.seq + ".", group.broken, {})
+
+
+def get_count_recursive(seq, broken, cache):
+    if len(broken) == 0:
+        if seq.count("#") == 0:
+            return 1
+        else:
+            return 0
+    if len(seq) == 0:
+        return 0
+
+    try:
+        return cache[(seq, broken)]
+    except:
+        pass
+
+    count = 0
+    fcb = 999999 if seq.find("#") == -1 else seq.find("#")
+    for match in regex.finditer(f"[?.]([?#]{{{broken[0]}}})[?.]", seq, overlapped=True):
+        # abort if match moves past first concrete broken "#"
+        if match.span()[0] > fcb:
+            break
+        count += get_count_recursive(seq[match.span()[1]-1:], broken[1:], cache)
+
+    cache[(seq, broken)] = count
     return count
+
 
 def unfold_groups(groups):
     for group in groups:
         group.unfold()
 
+
 def main(filename="input.txt"):
     groups = parse_groups(read_file(filename))
     counts = get_counts(groups)
+    print(f"part 1:  {counts = }")
     print(f"part 1:  {sum(counts)}")
+    
     unfold_groups(groups)
-    #breakpoint()
-    #counts = get_counts(groups)
-    #print(f"part 2:  {None}")
+    counts = get_counts(groups)
+    print(f"part 2:  {counts = }")
+    print(f"part 2:  {sum(counts)}")
 
 
 if __name__ == "__main__":
