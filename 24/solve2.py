@@ -10,13 +10,10 @@ def read_file(filename):
 
 
 def parse(lines):
-
     pairs = []
-
     for line in lines:
         x0, y0, z0, x1, y1, z1 = map(int, re.split("[,@]", line))
         pairs.append(((x0, y0, z0), (x1, y1, z1)))
-
     return pairs
 
 
@@ -27,7 +24,7 @@ def solve(balls, min_val, max_val):
     Let snow balls be represented by matrix B_0, B_1, etc...
     Let rock be represented by R.
     Let t be a vector with a bias of 1 for starting position and time element.
-    
+
     B_0 = x_0 vx_0
           y_0 vy_0
           z_0 vz_0
@@ -54,10 +51,10 @@ def solve(balls, min_val, max_val):
     x_0 + vx_0 * t_0 = x_r + vx_r * t_0
     y_0 + vy_0 * t_0 = y_r + vy_r * t_0
     z_0 + vz_0 * t_0 = z_r + vz_r * t_0
-   
+
     In this one set there are 7 unknowns, 6 for the rock and the impact time t_0
 
-    Repeating this for 300 rocks gives 
+    Repeating this for 300 rocks gives
     - 900 equations
     - 6 unknowns for the rock
     - 300 unknowns for impact times
@@ -78,19 +75,15 @@ def solve(balls, min_val, max_val):
         solver.add(ball_prime[1] == rock_prime[1])
         solver.add(ball_prime[2] == rock_prime[2])
 
-    print(solver.check()) 
-
+    solver.check()
     model = solver.model()
     x = model[rock[0][0]].as_long()
     y = model[rock[0][1]].as_long()
     z = model[rock[0][2]].as_long()
 
-    print(x)
-    print(y)
-    print(z)
-    print(x + y + z)
+    return x + y + z
 
-    
+
 def get_future(ball, t):
     """
     Get the future position of a snowball/rock.
@@ -100,7 +93,7 @@ def get_future(ball, t):
 
 
 def main(filename="input.txt", min_val=7, max_val=27):
-    print(solve(parse(read_file(filename)), min_val, max_val)})
+    print(solve(parse(read_file(filename)), min_val, max_val))
 
 
 if __name__ == "__main__":
