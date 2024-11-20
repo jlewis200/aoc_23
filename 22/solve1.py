@@ -84,7 +84,7 @@ def is_removable(graph, node):
 
 def get_coords(src, dst):
     """
-    Extract coordinates from source and destination.
+    Extract sorted coordinates from source and destination.
     """
     x_min, x_max = min(src[0], dst[0]), max(src[0], dst[0]) + 1
     y_min, y_max = min(src[1], dst[1]), max(src[1], dst[1]) + 1
